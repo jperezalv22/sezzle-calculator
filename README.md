@@ -166,5 +166,5 @@ in memory; there is no "clear history" button for that reason.
 - **Chained operations without `=`**, and a ± key. To get a negative number, you
   have to subtract (`0 − 5`).
 - **A keyboard shortcut for √.** It's reachable with Tab.
-- **More frontend tests.** Keyboard input has no tests yet, and it's the biggest
-  gap in coverage. There are also no end-to-end browser tests, and no CI.
+- **More frontend tests.** Keyboard input is only tested for Enter, and it's the
+  biggest gap in coverage. There are also no end-to-end browser tests, and no CI.
