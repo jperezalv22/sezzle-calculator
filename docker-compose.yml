@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    # Not published to the host: only nginx needs to reach it, and it does that
+    # over the compose network. Use `docker compose run` or add a ports entry
+    # if you want to hit the API directly.
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      # Override when 8080 is taken: `HOST_PORT=8090 docker compose up`.
+      - "${HOST_PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
