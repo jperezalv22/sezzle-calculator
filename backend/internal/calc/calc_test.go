@@ -6,8 +6,7 @@ import (
 	"testing"
 )
 
-// closeEnough compares float64 results with a tolerance rather than ==,
-// because binary floating point rarely lands on the exact decimal you expect.
+// closeEnough compares floats with a tolerance.
 func closeEnough(got, want float64) bool {
 	return math.Abs(got-want) < 1e-9
 }
@@ -51,9 +50,7 @@ func TestOperations(t *testing.T) {
 	}
 }
 
-// TestPercentageIsBPercentOfA pins down the reading of percentage, since the
-// operation has two plausible meanings and the other one is a silent wrong
-// answer rather than a failure.
+// Percentage has two plausible readings; this pins down which one we use.
 func TestPercentageIsBPercentOfA(t *testing.T) {
 	got, err := Percentage(200, 10)
 	if err != nil {
@@ -66,8 +63,7 @@ func TestPercentageIsBPercentOfA(t *testing.T) {
 }
 
 func TestDivideByZero(t *testing.T) {
-	// -0.0 is a distinct float64 value that compares equal to 0, so it must be
-	// rejected as a divisor too.
+	// -0 must be rejected as a divisor too.
 	for _, divisor := range []float64{0, math.Copysign(0, -1)} {
 		if _, err := Divide(1, divisor); !errors.Is(err, ErrDivideByZero) {
 			t.Errorf("Divide(1, %v) returned %v, want ErrDivideByZero", divisor, err)
@@ -167,8 +163,6 @@ func TestApplyUnknownOperation(t *testing.T) {
 	}
 }
 
-// TestApplyPropagatesOperationErrors checks that Apply hands back the error the
-// operation itself produced rather than flattening it into something generic.
 func TestApplyPropagatesOperationErrors(t *testing.T) {
 	if _, err := Apply(OpDivide, 1, 0); !errors.Is(err, ErrDivideByZero) {
 		t.Errorf("Apply(divide, 1, 0) returned %v, want ErrDivideByZero", err)
@@ -178,8 +172,7 @@ func TestApplyPropagatesOperationErrors(t *testing.T) {
 	}
 }
 
-// TestWrappedErrorsCarryDetail confirms the %w wrapping keeps both properties:
-// errors.Is still matches, and the message still says what went wrong.
+// Wrapped errors still match errors.Is and keep their detail.
 func TestWrappedErrorsCarryDetail(t *testing.T) {
 	_, err := Apply(OpSqrt, 1, 2)
 	if !errors.Is(err, ErrOperandCount) {

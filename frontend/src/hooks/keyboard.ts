@@ -1,11 +1,7 @@
 import type { Operation } from '../api/client'
 import type { Digit } from './calculatorReducer'
 
-/**
- * Everything a user can ask the calculator to do. Keypad clicks and physical
- * key presses both become one of these, so there is a single path into the
- * logic whichever way the input arrives.
- */
+/** Clicks and key presses both become one of these. */
 export type KeyCommand =
   | { type: 'digit'; digit: Digit }
   | { type: 'decimal' }
@@ -14,8 +10,7 @@ export type KeyCommand =
   | { type: 'backspace' }
   | { type: 'clear' }
 
-// A Map rather than an object literal, so a lookup can never hit something
-// inherited from Object.prototype.
+// A Map so a lookup can't hit something inherited from Object.prototype.
 const OPERATION_KEYS = new Map<string, Operation>([
   ['+', 'add'],
   ['-', 'subtract'],
@@ -25,12 +20,7 @@ const OPERATION_KEYS = new Map<string, Operation>([
   ['%', 'percentage'],
 ])
 
-/**
- * Maps a KeyboardEvent.key value to a command, or null for keys the calculator
- * does not use. Numpad keys report the same values as the main keyboard.
- *
- * Square root has no key of its own; it is reachable by tabbing to its button.
- */
+/** Null for unused keys. Square root has no key; tab to its button. */
 export function commandForKey(key: string): KeyCommand | null {
   if (key.length === 1 && key >= '0' && key <= '9') {
     return { type: 'digit', digit: key as Digit }
@@ -43,7 +33,7 @@ export function commandForKey(key: string): KeyCommand | null {
 
   switch (key) {
     case '.':
-    case ',': // The numpad decimal key sends "," in locales that write 2,5.
+    case ',': // Numpad decimal key in locales that write 2,5.
       return { type: 'decimal' }
     case 'Enter':
     case '=':

@@ -41,7 +41,7 @@ describe('calculate', () => {
   })
 
   it('reports a request that never completed as a NetworkError, not a CalculationError', async () => {
-    // fetch rejects, with a TypeError, only when no response arrived at all.
+    // fetch only rejects (with a TypeError) when no response arrived.
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
 
     const error = await calculate('add', [1, 2]).catch((e: unknown) => e)

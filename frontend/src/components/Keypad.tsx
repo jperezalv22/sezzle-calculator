@@ -3,13 +3,12 @@ import type { KeyCommand } from '../hooks/keyboard'
 import { OPERATIONS } from '../operations'
 
 interface KeypadProps {
-  /** The chosen operation, shown as a pressed key. */
   activeOperation: Operation | null
   canCalculate: boolean
   onCommand: (command: KeyCommand) => void
 }
 
-// The keys in reading order. The grid is four columns wide; = spans a full row.
+// Reading order, four columns; = spans a full row.
 const KEYS: readonly KeyCommand[] = [
   { type: 'clear' },
   { type: 'backspace' },
@@ -34,7 +33,7 @@ const KEYS: readonly KeyCommand[] = [
   { type: 'equals' },
 ]
 
-/** What a key shows, and what a screen reader says for it when that differs. */
+/** The aria-label is only set when it differs from the visible text. */
 function describeKey(key: KeyCommand): { text: string; label?: string } {
   switch (key.type) {
     case 'digit':
@@ -63,8 +62,7 @@ export function Keypad({ activeOperation, canCalculate, onCommand }: KeypadProps
             type="button"
             className={`key key--${key.type}`}
             aria-label={label}
-            // aria-pressed marks the chosen operation as a toggle that is on,
-            // which a screen reader announces and the CSS highlights.
+            // Announced by screen readers and used by the CSS for the highlight.
             aria-pressed={key.type === 'operation' ? key.operation === activeOperation : undefined}
             disabled={key.type === 'equals' && !canCalculate}
             onClick={() => onCommand(key)}

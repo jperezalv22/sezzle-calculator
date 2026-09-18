@@ -28,7 +28,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	// Cancelled on Ctrl+C, and on SIGTERM, which is what Docker sends on stop.
+	// Docker sends SIGTERM on stop.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -42,8 +42,7 @@ func main() {
 	<-ctx.Done()
 	log.Print("shutting down")
 
-	// Stop accepting connections and let in-flight requests finish, but give up
-	// after 10s rather than hang on one that never does.
+	// Let in-flight requests finish, for up to 10s.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
@@ -51,7 +50,7 @@ func main() {
 	}
 }
 
-// getenv returns the environment variable key, or fallback if it is unset or empty.
+// getenv returns fallback when key is unset or empty.
 func getenv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

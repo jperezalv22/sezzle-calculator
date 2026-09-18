@@ -12,15 +12,11 @@ import (
 	"calculator/internal/history"
 )
 
-// newTestServer returns a handler backed by a fresh history store, with CORS
-// off, so tests never share state.
+// newTestServer gives each test its own store, with CORS off.
 func newTestServer() http.Handler {
 	return NewServer(history.New(3), "")
 }
 
-// send runs one request through the handler. httptest.NewRecorder avoids
-// binding a real port: the handler is called directly, which keeps these tests
-// fast and order independent.
 func send(t *testing.T, handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
@@ -122,9 +118,7 @@ func TestCalculateErrorCodes(t *testing.T) {
 	}
 }
 
-// TestErrorsDoNotLeakGoText checks the client never sees what Go's own error
-// strings say: decoder messages name internal types and echo input back, and
-// calc's wrapped errors are written for logs.
+// Decoder errors name internal types and echo input; calc's are for logs.
 func TestErrorsDoNotLeakGoText(t *testing.T) {
 	tests := []struct {
 		body   string
@@ -145,8 +139,7 @@ func TestErrorsDoNotLeakGoText(t *testing.T) {
 	}
 }
 
-// TestEveryCalcErrorHasACode guards the mapping table: if a sentinel is added to
-// calc and not to calcErrors, this fails instead of the client getting a 500.
+// Fails if a calc error is added without an entry in calcErrors.
 func TestEveryCalcErrorHasACode(t *testing.T) {
 	sentinels := []error{
 		calc.ErrUnknownOperation,
@@ -158,8 +151,7 @@ func TestEveryCalcErrorHasACode(t *testing.T) {
 
 	for _, sentinel := range sentinels {
 		rec := httptest.NewRecorder()
-		// Wrapped, the way calc returns some of them: the mapping must see
-		// through it.
+		// calc wraps some errors, and the mapping must still match them.
 		writeCalcError(rec, errors.Join(errors.New("context"), sentinel))
 
 		if rec.Code != http.StatusBadRequest {
@@ -232,7 +224,7 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
-// HEAD is what many health checkers send. It has no body to decode.
+// Many health checkers send HEAD.
 func TestHealthzAnswersHead(t *testing.T) {
 	if rec := send(t, newTestServer(), http.MethodHead, "/healthz", ""); rec.Code != http.StatusOK {
 		t.Errorf("status = %d, want 200", rec.Code)
@@ -277,8 +269,7 @@ func TestHistoryRecordsOnlySuccesses(t *testing.T) {
 func TestHistoryIsEmptyArrayNotNull(t *testing.T) {
 	rec := send(t, newTestServer(), http.MethodGet, "/api/v1/history", "")
 
-	// Decoding tells [] and null apart: [] gives an empty non-nil slice, null
-	// leaves the slice nil.
+	// [] decodes to an empty slice, null to nil.
 	var entries []history.Entry
 	if err := json.Unmarshal(rec.Body.Bytes(), &entries); err != nil {
 		t.Fatalf("decoding history: %v (body: %s)", err, rec.Body)

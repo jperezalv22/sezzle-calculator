@@ -4,8 +4,7 @@ import { CalculationError, calculate } from '../api/client'
 import type { KeyCommand } from './keyboard'
 import { useCalculator } from './useCalculator'
 
-// Replace only calculate. The error classes stay real, because the hook tells
-// errors apart with instanceof and a fake class would never match.
+// Only calculate is mocked; the hook checks error classes with instanceof.
 vi.mock('../api/client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/client')>()),
   calculate: vi.fn(),
@@ -16,7 +15,7 @@ beforeEach(() => {
   calculateMock.mockReset()
 })
 
-/** Presses keys the way the keypad does: "12.5+3" becomes six commands. */
+/** "12.5+3" becomes six commands; r is square root. */
 function press(result: { current: ReturnType<typeof useCalculator> }, keys: string) {
   const operations: Record<string, KeyCommand> = {
     '+': { type: 'operation', operation: 'add' },
@@ -32,7 +31,6 @@ function press(result: { current: ReturnType<typeof useCalculator> }, keys: stri
       key === '.'
         ? { type: 'decimal' }
         : (operations[key] ?? { type: 'digit', digit: key as '0' })
-    // act() applies the state update before the next key, as a real render would.
     act(() => result.current.run(command))
   }
 }

@@ -2,22 +2,16 @@ import type { Operation } from './api/client'
 import { formatNumber } from './format'
 
 interface OperationInfo {
-  /** The operation's name, used as the accessible label of its key. */
+  /** Also the key's accessible label. */
   label: string
-  /** How the operation is drawn on its key and in the display. */
   symbol: string
-  /** What each operand means, one label per input. Its length is the arity. */
+  /** One per operand; the length is the arity. */
   operandLabels: readonly [string] | readonly [string, string]
-  /** How a finished calculation reads, e.g. "2 + 3" or "10% of 200". */
+  /** E.g. "2 + 3" or "10% of 200". */
   describe: (operands: number[]) => string
 }
 
-/**
- * Everything the UI needs to know about each operation, in one place.
- *
- * Typed as Record<Operation, …> so that adding an operation to the union in
- * api.ts is a compile error until it is described here too.
- */
+// A Record so a new Operation doesn't compile until it's described here.
 export const OPERATIONS: Record<Operation, OperationInfo> = {
   add: {
     label: 'Add',
@@ -56,8 +50,7 @@ export const OPERATIONS: Record<Operation, OperationInfo> = {
     describe: ([a]) => `√${formatNumber(a)}`,
   },
   percentage: {
-    // The backend computes "b percent of a"; the labels say so, so nobody has
-    // to guess which of the two common readings this is.
+    // The backend computes "b percent of a".
     label: 'Percentage',
     symbol: '%',
     operandLabels: ['Of', 'Percent'],
@@ -65,7 +58,6 @@ export const OPERATIONS: Record<Operation, OperationInfo> = {
   },
 }
 
-/** The order operations appear in the picker. */
 export const OPERATION_ORDER: readonly Operation[] = [
   'add',
   'subtract',

@@ -2,22 +2,15 @@ package api
 
 import "net/http"
 
-// withCORS lets the frontend at allowedOrigin call the API from the browser.
-//
-// An empty allowedOrigin disables CORS entirely, which is the right setting
-// whenever the frontend and API share an origin: behind the Vite dev proxy or
-// nginx, the browser never makes a cross-origin request at all.
-//
-// Only an exact match is allowed. There is deliberately no wildcard: "*" would
-// let any site call the API from its visitors' browsers.
+// withCORS allows exactly allowedOrigin, never "*". Leave it empty when the
+// frontend shares the API's origin, as it does behind the Vite proxy or nginx.
 func withCORS(allowedOrigin string, next http.Handler) http.Handler {
 	if allowedOrigin == "" {
 		return next
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// The response differs by Origin, so caches must key on it; otherwise a
-		// response cached for one origin can be served to another.
+		// Keeps caches from serving one origin's response to another.
 		w.Header().Add("Vary", "Origin")
 
 		origin := r.Header.Get("Origin")
@@ -26,9 +19,7 @@ func withCORS(allowedOrigin string, next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 
-		// A preflight is the browser asking permission before the real request,
-		// sent because the POST carries a JSON Content-Type. It is answered here
-		// and never reaches the routes.
+		// Preflight, triggered by the JSON Content-Type. Answered here.
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 			if !allowed {
 				w.WriteHeader(http.StatusForbidden)

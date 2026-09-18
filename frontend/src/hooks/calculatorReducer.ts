@@ -4,16 +4,12 @@ import { OPERATIONS } from '../operations'
 export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 export interface CalculatorState {
-  /** The number being typed, kept as text so "0." and "2.50" survive. Empty when none. */
+  /** Kept as text so "0." and "2.50" survive typing. */
   input: string
-  /** The left operand, fixed when an operation is chosen. */
   firstOperand: number | null
   operation: Operation | null
-  /** The last answer, shown until something new is typed. */
   result: number | null
-  /** The API's message from the last failed calculation. */
   error: string | null
-  /** True while = is waiting on the API. */
   pending: boolean
 }
 
@@ -40,10 +36,7 @@ function isUnary(operation: Operation): boolean {
   return OPERATIONS[operation].operandLabels.length === 1
 }
 
-/**
- * True after "9 √": the operation's only operand is already taken, so there is
- * nowhere for typed input to go. After "√" alone it is still to be typed.
- */
+/** True after "9 √": the only operand is taken, so typed digits are ignored. */
 function operandsComplete(state: CalculatorState): boolean {
   return state.operation !== null && isUnary(state.operation) && state.firstOperand !== null
 }
@@ -55,19 +48,16 @@ export function calculatorReducer(state: CalculatorState, action: CalculatorActi
     case 'success':
       return { ...initialState, result: action.result }
     case 'failure':
-      // The entry is dropped along with the failure, so the next key starts clean.
       return { ...initialState, error: action.message }
     case 'clear':
       return initialState
   }
 
-  // Everything below is a keypress. None act while a request is in flight: the
-  // answer is about to replace the display and would wipe out what was typed.
+  // Ignore keys while waiting: the answer would overwrite what was typed.
   if (state.pending) {
     return state
   }
 
-  // Any key dismisses an error, then does its normal job.
   const s = state.error === null ? state : { ...state, error: null }
 
   switch (action.type) {
@@ -85,25 +75,21 @@ export function calculatorReducer(state: CalculatorState, action: CalculatorActi
 
     case 'operation': {
       if (s.operation !== null) {
-        // "√ 9" has no first number that another operation could take over.
+        // "√ 9" has no first number for another operation to take.
         if (s.firstOperand === null) {
           return s
         }
-        // Before the second number is typed, a new operation replaces the old
-        // one. After it, = has to finish the calculation first, because only =
-        // calls the API.
+        // Swap the operation until the second number is typed; after that, only =.
         return s.input === '' ? { ...s, operation: action.operation } : s
       }
       if (s.input === '' && isUnary(action.operation)) {
-        // A one-operand operation with nothing typed waits for the number after
-        // it ("√ 9 ="). The last result stays on screen and is used if = comes
-        // first ("= then √ ="); typing a number replaces it.
+        // √ with nothing typed waits for the next number. If = comes first,
+        // pendingCalculation uses the result on screen.
         return { ...s, operation: action.operation }
       }
-      // The number typed, or else the last result, so "= then +" chains.
+      // Falls back to the last result so "= then +" chains.
       const value = s.input !== '' ? Number(s.input) : s.result
       if (value === null) {
-        // Nothing for a two-operand operation to take as its first number.
         return s
       }
       return { ...s, firstOperand: value, operation: action.operation, input: '', result: null }
@@ -114,14 +100,14 @@ export function calculatorReducer(state: CalculatorState, action: CalculatorActi
         return { ...s, input: s.input.slice(0, -1) }
       }
       if (s.operation !== null) {
-        // Undo the operation, leaving its number on screen as if just computed.
+        // Put the operand back on screen as if it were a result.
         return { ...s, operation: null, firstOperand: null, result: s.firstOperand ?? s.result }
       }
       return s
   }
 }
 
-/** What = would send, or null while the entry is incomplete. */
+/** What = would send, or null if the entry is incomplete. */
 export function pendingCalculation(
   state: CalculatorState,
 ): { operation: Operation; operands: number[] } | null {
@@ -130,8 +116,7 @@ export function pendingCalculation(
     return null
   }
   if (isUnary(operation)) {
-    // "9 √" already holds its number; "√ 9" has it in the input; "= then √"
-    // uses the result still on screen.
+    // "9 √" holds its number, "√ 9" has it in input, "= √" uses the result.
     if (firstOperand !== null) {
       return { operation, operands: [firstOperand] }
     }

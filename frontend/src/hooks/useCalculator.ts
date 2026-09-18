@@ -5,28 +5,20 @@ import { OPERATIONS } from '../operations'
 import { calculatorReducer, initialState, pendingCalculation } from './calculatorReducer'
 import { commandForKey, type KeyCommand } from './keyboard'
 
-/**
- * Keypad state for the calculator: type a number, choose an operation, type
- * the second number, press =. Square root takes its number on either side:
- * "√ 9 =" or "9 √ =".
- *
- * Only = talks to the API. Every other key is a local state change.
- */
+/** Only = calls the API. Square root works both ways: "√ 9 =" and "9 √ =". */
 export function useCalculator() {
   const [state, dispatch] = useReducer(calculatorReducer, initialState)
 
-  // The request in flight, if any. It is a ref, not state, because it is not
-  // something to render; it exists so the request can be cancelled.
+  // A ref, not state: it is only kept so the request can be cancelled.
   const inFlight = useRef<AbortController | null>(null)
 
-  // Cancel on unmount so a late answer is not dispatched into a dead component.
+  // Cancel on unmount so a late answer is not dispatched.
   useEffect(() => () => inFlight.current?.abort(), [])
 
   const calculation = pendingCalculation(state)
 
   async function equals() {
-    // Checked against the ref rather than state.pending: two presses within one
-    // render both see the state from before either press, and would both send.
+    // The ref, not state.pending: two presses in one render would both send.
     if (inFlight.current !== null || calculation === null) {
       return
     }
@@ -41,8 +33,7 @@ export function useCalculator() {
         dispatch({ type: 'success', result })
       }
     } catch (error) {
-      // Aborted means clear was pressed or the component went away, and either
-      // way this answer is no longer wanted.
+      // Aborted by clear or unmount, so the answer is no longer wanted.
       if (!controller.signal.aborted) {
         dispatch({ type: 'failure', message: messageFor(error) })
       }
@@ -54,14 +45,12 @@ export function useCalculator() {
   }
 
   function clear() {
-    // Clear also cancels a calculation in progress, instead of letting its
-    // answer land on the freshly cleared display.
+    // Cancel any request so its answer does not land on the cleared display.
     inFlight.current?.abort()
     inFlight.current = null
     dispatch({ type: 'clear' })
   }
 
-  /** Carries out one command, whether it came from a click or a key press. */
   function run(command: KeyCommand) {
     switch (command.type) {
       case 'equals':
@@ -75,15 +64,12 @@ export function useCalculator() {
     }
   }
 
-  /** A window keydown listener: digits, operators, Enter, Escape, Backspace. */
   function handleKeyDown(event: KeyboardEvent) {
-    // Leave browser and OS shortcuts alone: Ctrl+R must still reload.
+    // Leave shortcuts like Ctrl+R alone.
     if (event.ctrlKey || event.metaKey || event.altKey) {
       return
     }
-    // Enter on a focused button already presses that button. Treating it as =
-    // as well would press two keys at once, and taking Enter away from buttons
-    // would break keyboard navigation of the keypad.
+    // Enter on a focused button already presses it; treating it as = too would press two keys.
     if (event.key === 'Enter' && event.target instanceof HTMLButtonElement) {
       return
     }
@@ -92,8 +78,7 @@ export function useCalculator() {
     if (command === null) {
       return
     }
-    // Keeps the browser's own meaning of the key from firing too: "/" opens
-    // quick find in Firefox, for one.
+    // "/" would otherwise open quick find in Firefox.
     event.preventDefault()
     run(command)
   }
@@ -101,9 +86,8 @@ export function useCalculator() {
   const { operation, firstOperand } = state
 
   return {
-    /** The number to show: what is being typed, else the pending operand, else the last result. */
     display: state.input !== '' ? state.input : formatNumber(firstOperand ?? state.result ?? 0),
-    /** The calculation so far, above the number: "12 +", "√9", or "√" while its number is typed. */
+    /** "12 +", "√9", or "√" while its number is typed. */
     expression:
       operation === null
         ? ''
@@ -115,7 +99,6 @@ export function useCalculator() {
     operation,
     error: state.error,
     pending: state.pending,
-    /** False while a request runs or the entry is incomplete; drives the = key. */
     canCalculate: !state.pending && calculation !== null,
     run,
     handleKeyDown,
@@ -123,7 +106,7 @@ export function useCalculator() {
 }
 
 function messageFor(error: unknown): string {
-  // Both carry a message written for people; anything else would be a bug here.
+  // Anything else would be a bug.
   if (error instanceof CalculationError || error instanceof NetworkError) {
     return error.message
   }

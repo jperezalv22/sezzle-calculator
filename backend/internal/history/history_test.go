@@ -38,8 +38,6 @@ func TestStoreStampsEntries(t *testing.T) {
 	}
 }
 
-// TestAddClonesOperands checks that the store does not alias the caller's
-// slice: a slice header points at an array the caller still holds.
 func TestAddClonesOperands(t *testing.T) {
 	store := New(1)
 	operands := []float64{2, 3}
@@ -69,8 +67,7 @@ func TestEntriesReturnsCopies(t *testing.T) {
 	}
 }
 
-// TestStoreIsSafeForConcurrentUse is meaningful under `go test -race`: without
-// the mutex, the race detector flags the concurrent slice writes.
+// Only meaningful under `go test -race`.
 func TestStoreIsSafeForConcurrentUse(t *testing.T) {
 	store := New(8)
 

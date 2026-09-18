@@ -6,14 +6,11 @@ import { Keypad } from './Keypad'
 export function Calculator() {
   const calculator = useCalculator()
 
-  // useEffectEvent gives the listener the latest handler on every key press
-  // without the effect re-subscribing each render: the effect runs once, and
-  // the event function always sees current state.
+  // Sees current state without re-subscribing the listener on every render.
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => calculator.handleKeyDown(event))
 
   useEffect(() => {
-    // On window, not on this element, so typing works before anything on the
-    // page has been clicked or focused.
+    // On window so typing works before anything has focus.
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])

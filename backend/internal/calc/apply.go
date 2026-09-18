@@ -2,13 +2,10 @@ package calc
 
 import "fmt"
 
-// Operation names a calculation. It is a defined string type rather than a
-// plain string so that a caller cannot pass an arbitrary value without it being
-// visible at the call site.
+// Operation names a calculation.
 type Operation string
 
-// The supported operations. These are prefixed with Op because the bare names
-// belong to the functions above: Add is the function, OpAdd selects it.
+// Supported operations. The Op prefix avoids clashing with the functions.
 const (
 	OpAdd        Operation = "add"
 	OpSubtract   Operation = "subtract"
@@ -19,10 +16,7 @@ const (
 	OpPercentage Operation = "percentage"
 )
 
-// unaryOps and binaryOps record which operations exist and how many operands
-// each takes. Keeping them in these two tables means adding an operation is one
-// entry rather than a new branch in Apply, and it keeps the arity in one place
-// instead of spread across a switch.
+// Adding an operation is one entry in the table that matches its arity.
 var (
 	unaryOps = map[Operation]func(a float64) (float64, error){
 		OpSqrt: Sqrt,
@@ -38,12 +32,8 @@ var (
 	}
 )
 
-// Apply runs op over operands.
-//
-// Every operation takes two operands except sqrt, which takes one. Supplying
-// the wrong number returns ErrOperandCount, and an operation that does not
-// exist returns ErrUnknownOperation; both are wrapped with detail about what
-// was actually asked for.
+// Apply runs op over operands. Sqrt takes one operand, the rest take two.
+// Errors wrap ErrOperandCount or ErrUnknownOperation.
 func Apply(op Operation, operands ...float64) (float64, error) {
 	if fn, ok := unaryOps[op]; ok {
 		if len(operands) != 1 {
@@ -63,7 +53,5 @@ func Apply(op Operation, operands ...float64) (float64, error) {
 }
 
 func operandCountError(op Operation, want, got int) error {
-	// %w wraps the sentinel so errors.Is(err, ErrOperandCount) still matches,
-	// while the message carries the detail a caller wants to show a user.
 	return fmt.Errorf("%w: %s takes %d, got %d", ErrOperandCount, op, want, got)
 }

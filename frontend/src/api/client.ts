@@ -8,7 +8,7 @@ export type Operation =
   | 'sqrt'
   | 'percentage'
 
-/** One recorded calculation, as returned by GET /api/v1/history. */
+/** An entry from GET /api/v1/history. */
 export interface HistoryEntry {
   operation: Operation
   operands: number[]
@@ -17,10 +17,7 @@ export interface HistoryEntry {
   at: string
 }
 
-/**
- * The API answered, and said no: division by zero, an unknown operation and so
- * on. `code` is the API's stable error code; `message` is safe to show a user.
- */
+/** The API rejected the calculation. `message` is safe to show the user. */
 export class CalculationError extends Error {
   readonly code: string
 
@@ -32,9 +29,8 @@ export class CalculationError extends Error {
 }
 
 /**
- * No usable answer from the API: the request never completed, or what came back
- * was not the API speaking. A proxy's HTML error page when the backend is down
- * is the common case of the second. `status` is set when there was a response.
+ * No usable answer: the request failed, or the response didn't come from the API
+ * (e.g. a proxy's HTML error page). `status` is set when there was a response.
  */
 export class NetworkError extends Error {
   readonly status?: number
@@ -46,8 +42,7 @@ export class NetworkError extends Error {
   }
 }
 
-// `??` rather than `||`, so an explicitly empty value means "same origin" (for a
-// build served behind a proxy) instead of falling back to localhost.
+// `??`, not `||`: an empty value means same origin, not localhost.
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080').replace(/\/+$/, '')
 
 export async function calculate(
@@ -76,25 +71,17 @@ export async function fetchHistory(signal?: AbortSignal): Promise<HistoryEntry[]
   return body as HistoryEntry[]
 }
 
-/**
- * Sends a request and returns the parsed JSON of a successful response.
- *
- * Returns `unknown` on purpose: callers must check the shape before trusting it,
- * because a type assertion on a network response is a claim nothing verifies.
- */
+/** Returns `unknown` so callers have to check the shape of the response. */
 async function request(path: string, init: RequestInit): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(BASE_URL + path, init)
   } catch (error) {
-    // An abort is the caller cancelling, not the network failing, so it must
-    // reach the caller unchanged or they cannot tell the two apart.
+    // Rethrow aborts as-is so callers can tell a cancel from a network error.
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
     }
-    // fetch rejects only when no response arrived at all: server down, DNS,
-    // offline, or a CORS rejection, which the browser deliberately makes look
-    // identical to the others.
+    // No response at all: server down, offline, DNS or CORS (the browser hides which).
     throw new NetworkError('Could not reach the calculator service.', { cause: error })
   }
 
@@ -112,8 +99,7 @@ async function request(path: string, init: RequestInit): Promise<unknown> {
     return body
   }
 
-  // Only a body in the API's error shape is the API speaking. Anything else,
-  // even valid JSON, came from something in between.
+  // Anything not in the API's error shape, even valid JSON, came from a proxy.
   if (isRecord(body) && isRecord(body.error)) {
     const { code, message } = body.error
     if (typeof code === 'string' && typeof message === 'string') {

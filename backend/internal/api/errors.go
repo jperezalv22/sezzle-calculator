@@ -8,8 +8,7 @@ import (
 	"calculator/internal/calc"
 )
 
-// Error codes the API returns. They are the stable, machine-readable part of an
-// error; messages are for people and may be reworded.
+// Error codes are stable; messages may be reworded.
 const (
 	codeInvalidRequest   = "INVALID_REQUEST"
 	codeUnknownOperation = "UNKNOWN_OPERATION"
@@ -33,10 +32,8 @@ type errorDetail struct {
 	Message string `json:"message"`
 }
 
-// calcErrors maps each calc sentinel to what the client sees. The messages are
-// written here rather than taken from err.Error(): a Go error string is written
-// for whoever reads the logs, can change with any refactor, and may carry
-// internal detail. This way the client's text is a deliberate part of the API.
+// calcErrors maps calc errors to client messages. err.Error() isn't sent
+// because it's written for logs and may leak internals.
 var calcErrors = []struct {
 	target  error
 	code    string
@@ -49,8 +46,7 @@ var calcErrors = []struct {
 	{calc.ErrNotFinite, codeResultOutOfRange, "The result is too large or is undefined."},
 }
 
-// writeCalcError translates an error from calc into a response. Every calc
-// error describes a problem with the request, so all of them are 400s.
+// writeCalcError sends a 400, since every calc error is the request's fault.
 func writeCalcError(w http.ResponseWriter, err error) {
 	for _, m := range calcErrors {
 		if errors.Is(err, m.target) {
@@ -59,9 +55,7 @@ func writeCalcError(w http.ResponseWriter, err error) {
 		}
 	}
 
-	// calc returns nothing else today. If that changes, the new error is logged
-	// with its full text and the client gets a generic 500: never the raw error,
-	// and never a success.
+	// Unreachable today. A new calc error gets logged and a generic 500.
 	log.Printf("unmapped calc error: %v", err)
 	writeError(w, http.StatusInternalServerError, codeInternal, "Something went wrong.")
 }
