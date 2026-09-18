@@ -106,8 +106,8 @@ curl -X POST localhost:8080/api/v1/calculate \
 ### Others
 
 - `GET /healthz` returns `{"status": "ok"}`.
-- `GET /api/v1/history` returns the last 20 successful calculations. The frontend
-  doesn't show them yet.
+- `GET /api/v1/history` returns the last 20 successful calculations, newest
+  first. The frontend shows them next to the keypad.
 
 ## Tests
 
@@ -122,8 +122,9 @@ npm run coverage         # ~65% of lines; report in frontend/coverage/
 ```
 
 The backend tests cover every operation and every error code. The frontend tests
-cover the keypad logic, the API client with `fetch` mocked, and a user entering
-8 ÷ 0 = and seeing the error. They find elements by role and label, never by
+cover the keypad logic, the API client with `fetch` mocked, a user entering
+8 ÷ 0 = and seeing the error, and the history: loading, reusing a result,
+refreshing after =, and retrying after a failed load. They find elements by role and label, never by
 test ID.
 
 ## Decisions and assumptions
@@ -146,9 +147,13 @@ unknown operations are then just validation, with their own error codes.
 either side: `√ 9 =` or `9 √ =`. Choosing a second operation before the second
 number replaces the first one. The next key after an error clears the message.
 
+**History.** The panel reloads after every successful `=`. Clicking an entry puts
+its result on the display, so the next operation continues from it. The history
+is shared by everyone using the same server, since the backend keeps one list
+in memory; there is no "clear history" button for that reason.
+
 ## Left out for time
 
-- **History in the UI.** The backend records it; the keypad doesn't show it.
 - **Persistent history.** It lives in memory and is lost on restart.
 - **Chained operations without `=`**, and a ± key. To get a negative number, you
   have to subtract (`0 − 5`).

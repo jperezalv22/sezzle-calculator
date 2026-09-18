@@ -19,6 +19,7 @@ export type CalculatorAction =
   | { type: 'operation'; operation: Operation }
   | { type: 'backspace' }
   | { type: 'clear' }
+  | { type: 'recall'; result: number }
   | { type: 'request' }
   | { type: 'success'; result: number }
   | { type: 'failure'; message: string }
@@ -61,6 +62,10 @@ export function calculatorReducer(state: CalculatorState, action: CalculatorActi
   const s = state.error === null ? state : { ...state, error: null }
 
   switch (action.type) {
+    case 'recall':
+      // Shown as if just computed, so the next operation chains from it.
+      return { ...initialState, result: action.result }
+
     case 'digit':
       if (operandsComplete(s)) {
         return s

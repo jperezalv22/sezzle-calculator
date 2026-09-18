@@ -6,7 +6,7 @@ import { calculatorReducer, initialState, pendingCalculation } from './calculato
 import { commandForKey, type KeyCommand } from './keyboard'
 
 /** Only = calls the API. Square root works both ways: "√ 9 =" and "9 √ =". */
-export function useCalculator() {
+export function useCalculator({ onCalculated }: { onCalculated?: () => void } = {}) {
   const [state, dispatch] = useReducer(calculatorReducer, initialState)
 
   // A ref, not state: it is only kept so the request can be cancelled.
@@ -31,6 +31,7 @@ export function useCalculator() {
       const result = await calculate(calculation.operation, calculation.operands, controller.signal)
       if (!controller.signal.aborted) {
         dispatch({ type: 'success', result })
+        onCalculated?.()
       }
     } catch (error) {
       // Aborted by clear or unmount, so the answer is no longer wanted.
@@ -101,6 +102,8 @@ export function useCalculator() {
     pending: state.pending,
     canCalculate: !state.pending && calculation !== null,
     run,
+    /** Puts a past result on the display, ready for the next operation. */
+    recall: (result: number) => dispatch({ type: 'recall', result }),
     handleKeyDown,
   }
 }
