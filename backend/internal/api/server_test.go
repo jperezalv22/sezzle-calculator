@@ -139,8 +139,8 @@ func TestErrorsDoNotLeakGoText(t *testing.T) {
 
 	for _, tt := range tests {
 		rec := send(t, newTestServer(), http.MethodPost, "/api/v1/calculate", tt.body)
-		if strings.Contains(rec.Body.String(), tt.leaked) {
-			t.Errorf("response to %s contains %q: %s", tt.body, tt.leaked, rec.Body)
+		if got := decodeError(t, rec).Message; strings.Contains(got, tt.leaked) {
+			t.Errorf("message for %s contains %q: %q", tt.body, tt.leaked, got)
 		}
 	}
 }
@@ -178,8 +178,12 @@ func TestUnmappedErrorIsInternalAndOpaque(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}
-	if strings.Contains(rec.Body.String(), "hunter2") {
-		t.Errorf("internal error text reached the client: %s", rec.Body)
+	got := decodeError(t, rec)
+	if got.Code != codeInternal {
+		t.Errorf("code = %q, want %q", got.Code, codeInternal)
+	}
+	if strings.Contains(got.Message, "hunter2") {
+		t.Errorf("internal error text reached the client: %q", got.Message)
 	}
 }
 
@@ -212,11 +216,26 @@ func TestWrongMethodIs405WithJSONAndAllow(t *testing.T) {
 }
 
 func TestHealthz(t *testing.T) {
-	for _, method := range []string{http.MethodGet, http.MethodHead} {
-		rec := send(t, newTestServer(), method, "/healthz", "")
-		if rec.Code != http.StatusOK {
-			t.Errorf("%s /healthz: status = %d, want 200", method, rec.Code)
-		}
+	rec := send(t, newTestServer(), http.MethodGet, "/healthz", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+
+	var body struct {
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding body: %v (body: %s)", err, rec.Body)
+	}
+	if body.Status != "ok" {
+		t.Errorf("status field = %q, want %q", body.Status, "ok")
+	}
+}
+
+// HEAD is what many health checkers send. It has no body to decode.
+func TestHealthzAnswersHead(t *testing.T) {
+	if rec := send(t, newTestServer(), http.MethodHead, "/healthz", ""); rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", rec.Code)
 	}
 }
 
@@ -257,7 +276,17 @@ func TestHistoryRecordsOnlySuccesses(t *testing.T) {
 
 func TestHistoryIsEmptyArrayNotNull(t *testing.T) {
 	rec := send(t, newTestServer(), http.MethodGet, "/api/v1/history", "")
-	if got := strings.TrimSpace(rec.Body.String()); got != "[]" {
-		t.Errorf("body = %s, want []", got)
+
+	// Decoding tells [] and null apart: [] gives an empty non-nil slice, null
+	// leaves the slice nil.
+	var entries []history.Entry
+	if err := json.Unmarshal(rec.Body.Bytes(), &entries); err != nil {
+		t.Fatalf("decoding history: %v (body: %s)", err, rec.Body)
+	}
+	if entries == nil {
+		t.Error("history decoded as null, want an empty array")
+	}
+	if len(entries) != 0 {
+		t.Errorf("history has %d entries, want 0", len(entries))
 	}
 }
