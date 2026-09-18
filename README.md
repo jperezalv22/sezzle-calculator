@@ -118,6 +118,7 @@ go test -cover ./...     # calc 100%, api 98%, history 97%
 
 cd frontend
 npm test                 # Vitest + Testing Library
+npm run coverage         # ~65% of lines; report in frontend/coverage/
 ```
 
 The backend tests cover every operation and every error code. The frontend tests
@@ -152,4 +153,5 @@ number replaces the first one. The next key after an error clears the message.
 - **Chained operations without `=`**, and a ± key. To get a negative number, you
   have to subtract (`0 − 5`).
 - **A keyboard shortcut for √.** It's reachable with Tab.
-- **Frontend coverage reports**, end-to-end browser tests, and CI.
+- **More frontend tests.** Keyboard input has no tests yet, and it's the biggest
+  gap in coverage. There are also no end-to-end browser tests, and no CI.
