@@ -94,12 +94,17 @@ export function calculatorReducer(state: CalculatorState, action: CalculatorActi
         // calls the API.
         return s.input === '' ? { ...s, operation: action.operation } : s
       }
+      if (s.input === '' && isUnary(action.operation)) {
+        // A one-operand operation with nothing typed waits for the number after
+        // it ("√ 9 ="). The last result stays on screen and is used if = comes
+        // first ("= then √ ="); typing a number replaces it.
+        return { ...s, operation: action.operation }
+      }
       // The number typed, or else the last result, so "= then +" chains.
       const value = s.input !== '' ? Number(s.input) : s.result
       if (value === null) {
-        // Nothing to act on yet. A one-operand operation can still come first
-        // and take the number typed after it ("√ 9 ="); a two-operand one can't.
-        return isUnary(action.operation) ? { ...s, operation: action.operation } : s
+        // Nothing for a two-operand operation to take as its first number.
+        return s
       }
       return { ...s, firstOperand: value, operation: action.operation, input: '', result: null }
     }
@@ -110,7 +115,7 @@ export function calculatorReducer(state: CalculatorState, action: CalculatorActi
       }
       if (s.operation !== null) {
         // Undo the operation, leaving its number on screen as if just computed.
-        return { ...s, operation: null, firstOperand: null, result: s.firstOperand }
+        return { ...s, operation: null, firstOperand: null, result: s.firstOperand ?? s.result }
       }
       return s
   }
@@ -125,11 +130,15 @@ export function pendingCalculation(
     return null
   }
   if (isUnary(operation)) {
-    // "9 √" already holds its number; "√ 9" has it in the input.
+    // "9 √" already holds its number; "√ 9" has it in the input; "= then √"
+    // uses the result still on screen.
     if (firstOperand !== null) {
       return { operation, operands: [firstOperand] }
     }
-    return input === '' ? null : { operation, operands: [Number(input)] }
+    if (input !== '') {
+      return { operation, operands: [Number(input)] }
+    }
+    return state.result === null ? null : { operation, operands: [state.result] }
   }
   if (firstOperand === null || input === '') {
     return null

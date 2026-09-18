@@ -124,6 +124,36 @@ describe('useCalculator', () => {
     await waitFor(() => expect(calculateMock).toHaveBeenCalledWith('sqrt', [9], expect.any(AbortSignal)))
   })
 
+  it('takes the square root of the number typed after a finished calculation', async () => {
+    calculateMock.mockResolvedValueOnce(5).mockResolvedValueOnce(3)
+    const { result } = renderHook(() => useCalculator())
+
+    press(result, '2+3=')
+    await waitFor(() => expect(result.current.display).toBe('5'))
+
+    press(result, 'r9')
+    expect(result.current.expression).toBe('√')
+    expect(result.current.display).toBe('9')
+
+    press(result, '=')
+
+    await waitFor(() => expect(result.current.display).toBe('3'))
+    expect(calculateMock).toHaveBeenLastCalledWith('sqrt', [9], expect.any(AbortSignal))
+  })
+
+  it('takes the square root of the last result when = follows √ directly', async () => {
+    calculateMock.mockResolvedValueOnce(9).mockResolvedValueOnce(3)
+    const { result } = renderHook(() => useCalculator())
+
+    press(result, '4+5=')
+    await waitFor(() => expect(result.current.display).toBe('9'))
+
+    press(result, 'r=')
+
+    await waitFor(() => expect(result.current.display).toBe('3'))
+    expect(calculateMock).toHaveBeenLastCalledWith('sqrt', [9], expect.any(AbortSignal))
+  })
+
   it('does not start a two-number operation with nothing typed', () => {
     const { result } = renderHook(() => useCalculator())
 
