@@ -10,11 +10,11 @@ RUN npm ci
 COPY . .
 
 # Empty means same origin: nginx proxies /api to the backend. Otherwise the app
-# would call http://localhost:8080, which only works by coincidence.
+# would call http://localhost:8080, the local backend.
 ENV VITE_API_BASE_URL=""
 RUN npm run build
 
-# nginx serves the static build and proxies /api, like the Vite dev proxy.
+# nginx serves the static build and proxies /api.
 FROM nginx:1.27-alpine AS run
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf

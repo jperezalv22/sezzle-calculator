@@ -3,7 +3,7 @@ package api
 import "net/http"
 
 // withCORS allows exactly allowedOrigin, never "*". Leave it empty when the
-// frontend shares the API's origin, as it does behind the Vite proxy or nginx.
+// frontend shares the API's origin, as it does behind nginx.
 func withCORS(allowedOrigin string, next http.Handler) http.Handler {
 	if allowedOrigin == "" {
 		return next

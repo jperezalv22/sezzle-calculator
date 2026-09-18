@@ -16,8 +16,9 @@ backend/
   internal/history/    in-memory list of recent calculations
 frontend/src/
   api/client.ts        fetch wrapper; CalculationError vs NetworkError
-  hooks/               keypad state (a pure reducer), key mapping, useCalculator
-  components/          Calculator, Display, Keypad; they only render
+  hooks/               keypad state (a pure reducer), key mapping, useCalculator,
+                       useHistory
+  components/          Calculator, Display, Keypad, History; they only render
 ```
 
 **Why the math is separate from HTTP.** `calc` takes numbers and returns a number
@@ -59,14 +60,20 @@ only accepts cross-origin requests from the origin in `ALLOWED_ORIGIN`.
 | `ALLOWED_ORIGIN` | backend: the one origin allowed through CORS | `http://localhost:5173` |
 | `VITE_API_BASE_URL` | frontend: where the API is | `http://localhost:8080` |
 
-**Or with Docker**, both together behind nginx:
+**Or with Docker**, both together behind nginx, on **<http://localhost:3000>**:
 
 ```sh
-docker compose up --build        # http://localhost:8080
-HOST_PORT=8090 docker compose up --build   # if 8080 is taken
+docker compose up --build
 ```
 
+It uses port 3000, so it can run at the same time as the local backend on 8080.
+To pick another port: `HOST_PORT=3001 docker compose up --build` in bash, or
+`$env:HOST_PORT=3001; docker compose up --build` in PowerShell.
+
 ## API
+
+The examples call the local backend on `:8080`. With Docker, use `:3000`
+instead; nginx forwards `/api/` to the backend.
 
 ### `POST /api/v1/calculate`
 
@@ -105,7 +112,8 @@ curl -X POST localhost:8080/api/v1/calculate \
 
 ### Others
 
-- `GET /healthz` returns `{"status": "ok"}`.
+- `GET /healthz` returns `{"status": "ok"}`. It's only on the backend itself;
+  nginx doesn't forward it.
 - `GET /api/v1/history` returns the last 20 successful calculations, newest
   first. The frontend shows them next to the keypad.
 
@@ -118,7 +126,7 @@ go test -cover ./...     # calc 100%, api 98%, history 97%
 
 cd frontend
 npm test                 # Vitest + Testing Library
-npm run coverage         # ~65% of lines; report in frontend/coverage/
+npm run coverage         # ~86% of lines; report in frontend/coverage/
 ```
 
 The backend tests cover every operation and every error code. The frontend tests

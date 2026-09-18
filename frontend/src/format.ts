@@ -6,7 +6,13 @@ export function formatNumber(value: number): string {
   if (Number.isInteger(value) && Math.abs(value) < 1e21) {
     return value.toString()
   }
-  return Number(value.toPrecision(12)).toString()
+  const rounded = value.toPrecision(12)
+  // Keep the exponent: Number("1.80090042546e+15") would print made-up zeros.
+  if (rounded.includes('e')) {
+    const [mantissa, exponent] = rounded.split('e')
+    return `${Number(mantissa)}e${exponent}`
+  }
+  return Number(rounded).toString()
 }
 
 /** Returns undefined for blank input, which Number() would turn into 0. */

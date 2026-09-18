@@ -1,6 +1,7 @@
 import type { HistoryEntry, Operation } from '../api/client'
 import { formatNumber } from '../format'
 import { OPERATIONS } from '../operations'
+import { noMouseFocus } from './noMouseFocus'
 
 interface HistoryProps {
   entries: HistoryEntry[]
@@ -51,6 +52,7 @@ export function History({ entries, loading, error, onRetry, onSelect }: HistoryP
                   type="button"
                   className="history__item"
                   aria-label={`Use ${result}, from ${expression}`}
+                  onMouseDown={noMouseFocus}
                   onClick={() => onSelect(entry)}
                 >
                   <span className="history__expression">{expression} =</span>

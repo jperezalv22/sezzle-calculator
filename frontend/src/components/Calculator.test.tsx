@@ -62,6 +62,29 @@ describe('Calculator', () => {
     expect(JSON.parse(call?.[1]?.body as string)).toEqual({ operation: 'divide', operands: [8, 0] })
   })
 
+  it('treats Enter as = after a key was clicked with the mouse', async () => {
+    const fetchMock = stubApi({
+      '/api/v1/history': () => ({ status: 200, body: [] }),
+      '/api/v1/calculate': () => ({ status: 200, body: { result: 8 } }),
+    })
+
+    render(<Calculator />)
+
+    // A clicked key must not keep focus, or Enter would press it again.
+    const seven = screen.getByRole('button', { name: '7' })
+    const focusable = fireEvent.mouseDown(seven)
+    fireEvent.click(seven)
+    expect(focusable).toBe(false)
+
+    fireEvent.keyDown(window, { key: '+' })
+    fireEvent.keyDown(window, { key: '1' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('8'))
+    const call = fetchMock.mock.calls.find(([url]) => url.endsWith('/api/v1/calculate'))
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({ operation: 'add', operands: [7, 1] })
+  })
+
   it('lists past calculations, newest first', async () => {
     stubApi({
       '/api/v1/history': () => ({

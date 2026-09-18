@@ -1,6 +1,7 @@
 import type { Operation } from '../api/client'
 import type { KeyCommand } from '../hooks/keyboard'
 import { OPERATIONS } from '../operations'
+import { noMouseFocus } from './noMouseFocus'
 
 interface KeypadProps {
   activeOperation: Operation | null
@@ -65,6 +66,7 @@ export function Keypad({ activeOperation, canCalculate, onCommand }: KeypadProps
             // Announced by screen readers and used by the CSS for the highlight.
             aria-pressed={key.type === 'operation' ? key.operation === activeOperation : undefined}
             disabled={key.type === 'equals' && !canCalculate}
+            onMouseDown={noMouseFocus}
             onClick={() => onCommand(key)}
           >
             {text}
